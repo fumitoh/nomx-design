@@ -1,6 +1,5 @@
 import builtins
 from collections import namedtuple
-import textwrap
 import symtable
 from typing import Optional
 
@@ -189,81 +188,3 @@ class FormulaTransformer(m.MatcherDecoratableTransformer):
         else:
             return updated_node
 
-
-class_template = """\
-class _c_{name}(_mxs._mx_BaseSpace):
-
-    def __init__(self, parent):
-
-        # modelx variables
-        self._parent = parent
-
-        # Cache variables
-{cache_vars}
-
-        # Recursive reference assignment
-        self._mx_assign_refs()
-
-    def _mx_assign_refs(self):
-
-        # Reference assignment
-        # ref_vars
-
-
-{methods}
-
-
-{cache_methods}
-
-"""
-
-cache_method_noparam = """\
-    def {name}(self):
-        if self._has_{name}:
-            return self._v_{name}
-        else:
-            val = self._v_{name} = self._f_{name}()
-            self._has_{name} = True
-            return val
-
-"""
-
-cache_method = """\
-    def {name}(self, {params}):
-        if t in self._v_{name}:
-            return self._v_{name}[{args}]
-        else:
-            val = self._f_{name}({args})
-            self._v_{name}[{args}] = val
-            return val
-
-"""
-
-
-def generate_source(name: str, source: str):
-
-    trans = FormulaTransformer(source)
-    cache_vars = []
-    cache_methods = []
-    for func in trans.func_attrs.values():
-        if func.param_len > 0:
-            cache_vars.append(
-                "self._v_" + func.name + " = {}")
-            cache_methods.append(cache_method.format(
-                name=func.name,
-                params=func.params,
-                args=func.args))
-        else:
-            cache_vars.append(
-                "self._v_" + func.name + " = None")
-            cache_vars.append(
-                "self._has_" + func.name + " = False")
-            cache_methods.append(
-                cache_method_noparam.format(name=func.name))
-
-    return class_template.format(
-        name=name,
-        cache_vars=textwrap.indent("\n".join(cache_vars), ' '*8),
-        methods=textwrap.indent(trans.transformed.code, ' '*4),
-        cache_methods="".join(cache_methods)
-    )
