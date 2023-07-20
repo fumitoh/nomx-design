@@ -1,4 +1,5 @@
 import builtins
+import textwrap
 from collections import namedtuple
 import symtable
 from typing import Optional
@@ -56,7 +57,8 @@ def assert_scope_table_mapping(scope, table):
             raise RuntimeError("must not happen")
 
 
-FuncAttrs = namedtuple("FuncAttrs", ["name", "params", "param_len", "args"])
+FuncAttrs = namedtuple("FuncAttrs",
+                       ["name", "params", "param_len", "args", "tuplized_args"])
 
 
 class FormulaTransformer(m.MatcherDecoratableTransformer):
@@ -140,13 +142,15 @@ class FormulaTransformer(m.MatcherDecoratableTransformer):
             return updated_node
 
         params = [p.name.value for p in original_node.params.params]
-        args = ", ".join(params) if len(params) < 2 else "(" + ", ".join(params) + ")"
+        args = ", ".join(params)
+        t_args = "(" + params[0] + ",)" if len(params) == 1 else "(" + ", ".join(params) + ")"
 
         self.func_attrs[original_node.name.value] = FuncAttrs(
             name=original_node.name.value,
             params=self.module.code_for_node(original_node.params),
             param_len=len(params),
-            args=args
+            args=args,
+            tuplized_args=t_args
         )
 
         name = updated_node.name.with_changes(
@@ -188,3 +192,18 @@ class FormulaTransformer(m.MatcherDecoratableTransformer):
         else:
             return updated_node
 
+
+def lambda_to_func(source, name):
+    template = textwrap.dedent("""\
+    def {name}({params}):
+        return {value}
+    """)
+    m = cst.parse_module(source)
+    lmd = m.body[0].body[0].value
+    params = m.code_for_node(lmd.params)
+    value = m.code_for_node(lmd.body)
+    return template.format(
+        name=name,
+        params=params,
+        value=value
+    )
