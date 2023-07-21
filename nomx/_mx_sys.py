@@ -4,7 +4,7 @@ import pathlib
 try:
     has_io = True
     from . import _mx_io
-except ModuleNotFoundError:
+except ImportError:
     has_io = False
 
 
