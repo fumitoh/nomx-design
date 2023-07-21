@@ -1,4 +1,5 @@
 import collections
+import pickle
 from importlib import import_module
 import pathlib
 try:
@@ -32,25 +33,28 @@ class _mx_BaseParent(_mx_BaseMxObject):
 class _mx_BaseModel(_mx_BaseParent):
 
     def _mx_load_io(self):
-        if not has_io:
-            return None
 
         ios = {}
-        values = {}
-        for k, v in _mx_io.ios.items():
-            cls = io_types[v['type']]
-            load_from = pathlib.Path(__file__).parent / k
-            ios[k] = cls(k, load_from, v)
+        io_data = {}
+        if has_io:
+            for k, v in _mx_io.ios.items():
+                cls = io_types[v['type']]
+                load_from = pathlib.Path(__file__).parent / k
+                ios[k] = cls(k, load_from, v)
 
-        for k, v in _mx_io.iospecs.items():
-            cls = iospec_types[v['type']]
-            values[k] = cls(ios[v['io']], v['kwargs']).load_value()
+            for k, v in _mx_io.iospecs.items():
+                cls = iospec_types[v['type']]
+                io_data[k] = cls(ios[v['io']], v['kwargs']).load_value()
+
+        path = pathlib.Path(__file__).parent / '_mx_pickled'
+        if path.exists():
+            with open(path, mode='rb') as f:
+                pickle_data = pickle.load(f)
+        else:
+            pickle_data = {}
 
         for m_or_s in self._mx_walk():
-            m_or_s._mx_assign_refs(values, None)
-
-    def _mx_load_pickled(self):
-        pass
+            m_or_s._mx_assign_refs(io_data, pickle_data)
 
 
 class _mx_BaseSpace(_mx_BaseParent):

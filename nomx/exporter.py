@@ -5,6 +5,7 @@ import textwrap
 import types
 import pprint
 from functools import cached_property
+import pickle
 
 from modelx.core import mxsys
 from modelx.core.base import Interface
@@ -87,6 +88,9 @@ class Exporter:
                 self.path / (DATA_MODULE + '.py'))
             io_manager.write_ios(self.path)
 
+        # Write pickle data
+        io_manager.pickle(self.path / '_mx_pickled')
+
 
 class DataManager:
 
@@ -125,6 +129,11 @@ class DataManager:
 
     def write_ios(self, root):
         mxsys.iomanager.write_ios(root)
+
+    def pickle(self, path):
+        if self.pickle_data:
+            with open(path, 'wb') as f:
+                pickle.dump(self.pickle_data, f)
 
 
 class ParentTranslator:
