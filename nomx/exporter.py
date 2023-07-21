@@ -11,6 +11,7 @@ from modelx.core.base import Interface
 from modelx.core.parent import BaseParent
 from modelx.core.model import Model
 from modelx.core.space import BaseSpace
+from modelx.core.cells import Cells
 from modelx.serialize.ziputil import write_str_utf8, copy_file
 from modelx.core.util import abs_to_rel_tuple
 
@@ -342,7 +343,14 @@ class SpaceTranslator(ParentTranslator):
             lines.append(src)
 
         source = '\n'.join(lines)
-        trans = FormulaTransformer(source)
+
+        cells = set()   # Pass cells names for replacing subscription
+        for d in [space.cells, space.refs]:
+            for k, v in d.items():
+                if isinstance(v, Cells):
+                    cells.add(k)
+
+        trans = FormulaTransformer(source, cells)
 
         cache_vars = []
         cache_methods = []

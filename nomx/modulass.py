@@ -67,9 +67,10 @@ class FormulaTransformer(m.MatcherDecoratableTransformer):
     METADATA_DEPENDENCIES = (ParentNodeProvider,)
     matchers_compstats = m.If() | m.Try() | m.With() | m.For() | m.While()
 
-    def __init__(self, source):
+    def __init__(self, source: str, cells: set[str]):
         super().__init__()
         self.source = source
+        self.cells = cells
         self.prefix = "_f_"
         self.wrapper = cst.metadata.MetadataWrapper(cst.parse_module(source))
         self.module = self.wrapper.module
@@ -118,6 +119,15 @@ class FormulaTransformer(m.MatcherDecoratableTransformer):
             else:
                 return False
         else:   # names between from and import, True, False, None
+            return False
+
+    def should_redirect(self, node: cst.BaseExpression):
+        if m.matches(node, m.Name()):
+            if self.should_replace(node) and node.value in self.cells:
+                return True
+            else:
+                return False
+        else:
             return False
 
     @m.call_if_not_inside(m.FunctionDef())
@@ -189,6 +199,22 @@ class FormulaTransformer(m.MatcherDecoratableTransformer):
             return updated_node
         elif self.should_replace(original_node):
             return cst.Attribute(value=cst.Name('self'), attr=updated_node)
+        else:
+            return updated_node
+
+    def leave_Subscript(
+        self, original_node: "Subscript", updated_node: "Subscript"
+    ) -> "BaseExpression":
+
+        if self.should_redirect(original_node.value):
+            name = self.module.code_for_node(updated_node.value)
+            args = []
+            for elm in updated_node.slice:
+                args.append(self.module.code_for_node(elm))
+
+            return cst.parse_expression(
+                name + '(' + ''.join(args) + ')',
+                config=self.module.config_for_parsing)
         else:
             return updated_node
 
