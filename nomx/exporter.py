@@ -20,6 +20,7 @@ from .modulass import FormulaTransformer, lambda_to_func
 
 this_dir = pathlib.Path(__file__).parent
 
+MODEL_VAR = 'mx_model'
 MODEL_MODULE = '_mx_model'
 SPACE_MODULE = '_mx_classes'
 DATA_MODULE = '_mx_io'
@@ -65,10 +66,11 @@ class Exporter:
                 SpaceTranslator(parent, io_manager).code,
                 cur_dir / (SPACE_MODULE + '.py'))
 
-            if parent is not self.model:
-                init_line = f"from . import {SPACE_MODULE}"
+            if parent is self.model:
+                init_line = f'from .{MODEL_MODULE} import {MODEL_VAR}'
             else:
-                init_line = ''
+                init_line = f"from . import {SPACE_MODULE}"
+
             write_str_utf8(init_line, cur_dir / '__init__.py')
 
         # Write IO metadata
@@ -153,6 +155,7 @@ class ParentTranslator:
     def code(self):
         return self.module_template.format(
             dots=self.dots,
+            MODEL_VAR=MODEL_VAR,
             SPACE_MODULE=SPACE_MODULE,
             child_imports=self.child_imports,
             name=self.parent.name,
@@ -228,7 +231,7 @@ class ModelTranslator(ParentTranslator):
     
     {class_defs}
     
-    mx_model = {name} = _c_{name}()
+    {MODEL_VAR} = {name} = _c_{name}()
     """)
     
     class_template = textwrap.dedent("""\
