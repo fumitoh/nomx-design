@@ -16,7 +16,7 @@ from modelx.core.cells import Cells
 from modelx.serialize.ziputil import write_str_utf8, copy_file
 from modelx.core.util import abs_to_rel_tuple
 
-from .modulass import (
+from .transformer import (
     FormulaTransformer, lambda_to_func, is_lambda_expr, get_func_attrs)
 
 this_dir = pathlib.Path(__file__).parent
