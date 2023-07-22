@@ -16,7 +16,8 @@ from modelx.core.cells import Cells
 from modelx.serialize.ziputil import write_str_utf8, copy_file
 from modelx.core.util import abs_to_rel_tuple
 
-from .modulass import FormulaTransformer, lambda_to_func
+from .modulass import (
+    FormulaTransformer, lambda_to_func, is_lambda_expr, get_func_attrs)
 
 this_dir = pathlib.Path(__file__).parent
 
@@ -294,6 +295,7 @@ class SpaceTranslator(ParentTranslator):
 
     {space_assigns}
     {space_dict}
+    {itemspace_dict}
 
     {cache_vars}
 
@@ -305,8 +307,9 @@ class SpaceTranslator(ParentTranslator):
 
     {cache_methods}
 
+    {itemspace_methods}
     """)
-
+    # TODO
     cache_method_noparam = textwrap.dedent("""\
         def {name}(self):
             if self._has_{name}:
@@ -317,7 +320,7 @@ class SpaceTranslator(ParentTranslator):
                 return val
 
     """)
-
+    # TODO
     cache_method = textwrap.dedent("""\
         def {name}(self, {params}):
             if {idx_args} in self._v_{name}:
@@ -327,6 +330,25 @@ class SpaceTranslator(ParentTranslator):
                 self._v_{name}[{idx_args}] = val
                 return val
 
+    """)
+
+    itemspace_methods = textwrap.dedent("""\
+    def _mx_assign_refs_itemspace(self, _mx_base, {args}):
+    {itemspace_ref_assigns}
+
+    def __call__(self, {params}):
+        _mx_key = {idx_args}
+        if _mx_key in self._mx_itemspaces:
+            return self._mx_itemspaces[_mx_key]
+        else:
+            _mx_space = self.__class__(self._parent)
+            _mx_space._mx_assign_refs_itemspace(self, {args})
+            _mx_space._mx_walk(skip_self=True)
+            self._mx_itemspaces[_mx_key] = _mx_space
+            return _mx_space
+
+    def __getitem__(self, item):
+        return self.__call__(*item)
     """)
 
     @cached_property
@@ -350,7 +372,7 @@ class SpaceTranslator(ParentTranslator):
 
         for k, v in space.cells.items():
             src = v.formula.source
-            if src.strip()[:6] == "lambda":
+            if is_lambda_expr(src):
                 src = lambda_to_func(src, k)
             lines.append(src)
 
@@ -387,14 +409,39 @@ class SpaceTranslator(ParentTranslator):
         if cache_vars:
             cache_vars.insert(0, "# Cache variables")
 
+        # ItemSpace
+        if space.formula:
+            itemspace_dict = "self._mx_itemspaces = {}"
+            src = space.formula.source
+            if is_lambda_expr(src):
+                src = lambda_to_func(src, '_formula')
+            attrs = get_func_attrs(src)
+            idx_args = attrs.args if attrs.param_len == 1 else attrs.tuplized_args
+            params = [arg.strip() for arg in attrs.args.split(",")]     # TODO
+            itemspace_methods = self.itemspace_methods.format(
+                args=attrs.args,
+                params=attrs.params,
+                idx_args=idx_args,
+                itemspace_ref_assigns=textwrap.indent(
+                    self.itemspace_ref_assigns(
+                    space,
+                    params), ' ' * 4)
+            )
+        else:
+            itemspace_dict = ''
+            itemspace_methods = ''
+
         return self.class_template.format(
             name=space.name,
             space_assigns=textwrap.indent(self.space_assigns(space), ' ' * 8),
             space_dict=textwrap.indent(self.space_dict(space), ' ' * 8),
+            itemspace_dict=textwrap.indent(itemspace_dict, ' ' * 8),
             cache_vars=textwrap.indent("\n".join(cache_vars), ' ' * 8),
             ref_assigns=textwrap.indent(self.ref_assigns(space), ' ' * 8),
             methods=textwrap.indent(trans.transformed.code, ' ' * 4),
-            cache_methods=textwrap.indent(''.join(cache_methods), ' ' * 4))
+            cache_methods=textwrap.indent(''.join(cache_methods), ' ' * 4),
+            itemspace_methods=textwrap.indent(itemspace_methods, ' ' * 4)
+        )
 
     def space_assigns(self, parent):
         result = []
@@ -405,5 +452,25 @@ class SpaceTranslator(ParentTranslator):
                     'self.' + k + " = " + pkg + SPACE_MODULE + "." + SPACE_CLS_PREFIX + k + "(self)")
         if result:
             result.insert(0, "# Space assignments")
+
+        return "\n".join(result)
+
+    def itemspace_ref_assigns(self, parent, params):
+        params = list(params)
+        result = []
+        for k, v in parent.refs.items():
+            if k[0] != "_":
+                if k in params:
+                    result.append('self.' + k + ' = ' + k)
+                    params.remove(k)
+                else:
+                    result.append('self.' + k + ' = _mx_base.' + k)
+        for k in params:
+            result.append('self.' + k + ' = ' + k)
+
+        if result:
+            result.insert(0, "# Reference assignment")
+        else:
+            result.append('pass')
 
         return "\n".join(result)

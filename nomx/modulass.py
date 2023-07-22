@@ -7,6 +7,7 @@ from typing import Optional
 
 # from symtable import symtable, SymbolTable
 import libcst as cst
+from libcst import FunctionDef, Module
 from libcst.metadata import (
     GlobalScope, ClassScope, FunctionScope, ComprehensionScope, ParentNodeProvider)
 import libcst.matchers as m
@@ -59,6 +60,21 @@ def assert_scope_table_mapping(scope, table):
 
 FuncAttrs = namedtuple("FuncAttrs",
                        ["name", "params", "param_len", "args", "tuplized_args"])
+
+
+def funcdef_to_attrs(func: FunctionDef, module: Module) -> FuncAttrs:
+
+    params = [p.name.value for p in func.params.params]
+    args = ", ".join(params)
+    t_args = "(" + params[0] + ",)" if len(params) == 1 else "(" + ", ".join(params) + ")"
+
+    return FuncAttrs(
+        name=func.name.value,
+        params=module.code_for_node(func.params),
+        param_len=len(params),
+        args=args,
+        tuplized_args=t_args
+    )
 
 
 class FormulaTransformer(m.MatcherDecoratableTransformer):
@@ -219,6 +235,10 @@ class FormulaTransformer(m.MatcherDecoratableTransformer):
             return updated_node
 
 
+def is_lambda_expr(source):
+    return source.strip()[:6] == "lambda"
+
+
 def lambda_to_func(source, name):
     template = textwrap.dedent("""\
     def {name}({params}):
@@ -233,3 +253,9 @@ def lambda_to_func(source, name):
         params=params,
         value=value
     )
+
+
+def get_func_attrs(source: str) -> FuncAttrs:
+    module = cst.parse_module(source)
+    func = module.children[0]
+    return funcdef_to_attrs(func, module)

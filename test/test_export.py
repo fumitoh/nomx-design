@@ -93,3 +93,8 @@ def test_module_ref(mortgage_model):
     source, target = mortgage_model
     assert source.Summary.itertools is sys.modules['itertools']
 
+
+def test_itemspace(mortgage_model):
+    source, target = mortgage_model
+    assert source.Summary.Payments() == target.Summary.Payments()
+

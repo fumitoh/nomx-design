@@ -17,9 +17,12 @@ class _mx_BaseParent(_mx_BaseMxObject):
 
     _mx_spaces: dict[str, '_mx_BaseSpace']
 
-    def _mx_walk(self):
+    def _mx_walk(self, skip_self: bool = False):
         """Generator yielding spaces in breadth-first order"""
-        que = collections.deque([self])
+        if skip_self:
+            que = collections.deque(self._mx_spaces.values())
+        else:
+            que = collections.deque([self])
         while que:
             parent = que.popleft()
             yield parent
