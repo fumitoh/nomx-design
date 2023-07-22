@@ -146,21 +146,6 @@ class MiniPandasData(MiniBaseIOSpec):
             self._value._mx_dataclient = self
 
 
-def load_io(root):
-    if not has_io:
-        raise RuntimeError("must not happen")
-
-    root = pathlib.Path(root)
-
-    ios = {}            # path -> MiniBaseSharedIO
-    iospecs = {}        # id -> MiniBaseIOSpec
-    values = {}         # id -> values
-
-
-def load_io_PandasIO():
-    pass
-
-
 io_types = {
     'PandasIO': MiniPandasIO
 }

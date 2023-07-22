@@ -309,26 +309,26 @@ class SpaceTranslator(ParentTranslator):
 
     {itemspace_methods}
     """)
-    # TODO
+
     cache_method_noparam = textwrap.dedent("""\
-        def {name}(self):
-            if self._has_{name}:
-                return self._v_{name}
-            else:
-                val = self._v_{name} = self._f_{name}()
-                self._has_{name} = True
-                return val
+    def {name}(self):
+        if self._has_{name}:
+            return self._v_{name}
+        else:
+            val = self._v_{name} = self._f_{name}()
+            self._has_{name} = True
+            return val
 
     """)
-    # TODO
+
     cache_method = textwrap.dedent("""\
-        def {name}(self, {params}):
-            if {idx_args} in self._v_{name}:
-                return self._v_{name}[{idx_args}]
-            else:
-                val = self._f_{name}({args})
-                self._v_{name}[{idx_args}] = val
-                return val
+    def {name}(self, {params}):
+        if {idx_args} in self._v_{name}:
+            return self._v_{name}[{idx_args}]
+        else:
+            val = self._f_{name}({args})
+            self._v_{name}[{idx_args}] = val
+            return val
 
     """)
 
