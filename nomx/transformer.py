@@ -59,22 +59,45 @@ def assert_scope_table_mapping(scope, table):
 
 
 FuncAttrs = namedtuple("FuncAttrs",
-                       ["name", "params", "param_len", "args", "tuplized_args"])
+                       ["name", "params", "param_str",
+                        "param_len", "arg_str",
+                        "tuplized_arg_str", "key_str"])
+
+# Example:
+#
+# def foo(x, y=1):
+#     pass
+#
+#     name: 'foo'
+#     param_str: 'x, y=1'
+#     param_len: 2
+#     arg_str: x, y
+#     tuplized_arg_str: '(x, y)'
+#     key_str: '(x, y)'  in case of a single parameter, no parenthesis (such as 'x')
 
 
 def funcdef_to_attrs(func: FunctionDef, module: Module) -> FuncAttrs:
 
     params = [p.name.value for p in func.params.params]
-    args = ", ".join(params)
+    argstr = ", ".join(params)
     t_args = "(" + params[0] + ",)" if len(params) == 1 else "(" + ", ".join(params) + ")"
 
     return FuncAttrs(
         name=func.name.value,
-        params=module.code_for_node(func.params),
+        params=params,
+        param_str=module.code_for_node(func.params),
         param_len=len(params),
-        args=args,
-        tuplized_args=t_args
+        arg_str=argstr,
+        tuplized_arg_str=t_args,
+        key_str=argstr if len(params) == 1 else t_args
     )
+
+
+def get_func_attrs(source: str) -> FuncAttrs:
+    """source must be a function definition statement"""
+    module = cst.parse_module(source)
+    func = module.body[0]
+    return funcdef_to_attrs(func, module)
 
 
 class FormulaTransformer(m.MatcherDecoratableTransformer):
@@ -167,16 +190,8 @@ class FormulaTransformer(m.MatcherDecoratableTransformer):
             self.func_level -= 1
             return updated_node
 
-        params = [p.name.value for p in original_node.params.params]
-        args = ", ".join(params)
-        t_args = "(" + params[0] + ",)" if len(params) == 1 else "(" + ", ".join(params) + ")"
-
-        self.func_attrs[original_node.name.value] = FuncAttrs(
-            name=original_node.name.value,
-            params=self.module.code_for_node(original_node.params),
-            param_len=len(params),
-            args=args,
-            tuplized_args=t_args
+        self.func_attrs[original_node.name.value] = get_func_attrs(
+            self.module.code_for_node(original_node)
         )
 
         name = updated_node.name.with_changes(
@@ -255,7 +270,3 @@ def lambda_to_func(source, name):
     )
 
 
-def get_func_attrs(source: str) -> FuncAttrs:
-    module = cst.parse_module(source)
-    func = module.children[0]
-    return funcdef_to_attrs(func, module)

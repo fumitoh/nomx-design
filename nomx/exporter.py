@@ -390,14 +390,13 @@ class SpaceTranslator(ParentTranslator):
         cache_methods = []
         for func in trans.func_attrs.values():
             if func.param_len > 0:
-                idx_args = func.args if func.param_len == 1 else func.tuplized_args
                 cache_vars.append(
                     "self._v_" + func.name + " = {}")
                 cache_methods.append(self.cache_method.format(
                     name=func.name,
-                    params=func.params,
-                    args=func.args,
-                    idx_args=idx_args
+                    params=func.param_str,
+                    args=func.arg_str,
+                    idx_args=func.key_str
                 ))
             else:
                 cache_vars.append(
@@ -416,16 +415,14 @@ class SpaceTranslator(ParentTranslator):
             if is_lambda_expr(src):
                 src = lambda_to_func(src, '_formula')
             attrs = get_func_attrs(src)
-            idx_args = attrs.args if attrs.param_len == 1 else attrs.tuplized_args
-            params = [arg.strip() for arg in attrs.args.split(",")]     # TODO
             itemspace_methods = self.itemspace_methods.format(
-                args=attrs.args,
-                params=attrs.params,
-                idx_args=idx_args,
+                args=attrs.arg_str,
+                params=attrs.param_str,
+                idx_args=attrs.key_str,
                 itemspace_ref_assigns=textwrap.indent(
                     self.itemspace_ref_assigns(
                     space,
-                    params), ' ' * 4)
+                    attrs.params), ' ' * 4)
             )
         else:
             itemspace_dict = ''
