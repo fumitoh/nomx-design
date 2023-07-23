@@ -1,7 +1,7 @@
 # nomx-design
 
 This repository is for proto-typing the feature 
-of exporting *modelx* models to pure-python models (*nomx* models).
+of exporting [*modelx*](https://github.com/fumitoh/modelx) models to pure-python models (*nomx* models).
 
 A *nomx* model is a Python package, and does not depend on modelx.
 
