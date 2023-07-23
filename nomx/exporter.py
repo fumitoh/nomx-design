@@ -24,7 +24,7 @@ this_dir = pathlib.Path(__file__).parent
 MODEL_VAR = 'mx_model'
 MODEL_MODULE = '_mx_model'
 SPACE_MODULE = '_mx_classes'
-DATA_MODULE = '_mx_io'
+DATA_MODULE = '_mx_io'  # _mx_io is hard-coded in _mx_sys
 SPACE_PKG_PREFIX = '_m_'
 SPACE_CLS_PREFIX = '_c_'
 
