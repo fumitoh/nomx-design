@@ -9,13 +9,13 @@ except ImportError:
     has_io = False
 
 
-class _mx_BaseMxObject:
+class BaseMxObject:
     pass
 
 
-class _mx_BaseParent(_mx_BaseMxObject):
+class BaseParent(BaseMxObject):
 
-    _mx_spaces: dict[str, '_mx_BaseSpace']
+    _mx_spaces: dict[str, 'BaseSpace']
 
     def _mx_walk(self, skip_self: bool = False):
         """Generator yielding spaces in breadth-first order"""
@@ -33,7 +33,7 @@ class _mx_BaseParent(_mx_BaseMxObject):
         raise NotImplementedError
 
 
-class _mx_BaseModel(_mx_BaseParent):
+class BaseModel(BaseParent):
 
     def _mx_load_io(self):
 
@@ -60,7 +60,7 @@ class _mx_BaseModel(_mx_BaseParent):
             m_or_s._mx_assign_refs(io_data, pickle_data)
 
 
-class _mx_BaseSpace(_mx_BaseParent):
+class BaseSpace(BaseParent):
 
     def _mx_get_object(self, keys):
         obj = self

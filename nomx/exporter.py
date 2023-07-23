@@ -236,7 +236,7 @@ class ModelTranslator(ParentTranslator):
     """)
     
     class_template = textwrap.dedent("""\
-    class _c_{name}(_mx_sys._mx_BaseModel):
+    class _c_{name}(_mx_sys.BaseModel):
     
         def __init__(self):
         
@@ -285,7 +285,7 @@ class SpaceTranslator(ParentTranslator):
     """)
 
     class_template = textwrap.dedent("""\
-    class _c_{name}(_mx_sys._mx_BaseSpace):
+    class _c_{name}(_mx_sys.BaseSpace):
 
         def __init__(self, parent):
 
